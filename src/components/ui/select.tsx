@@ -16,7 +16,7 @@ import { Select } from "@radix-ui/react-select";
 //define the select component
 
 const SelectComponent = forwardRef<HTMLSelectElement, SelectProps>(
-    function SelectComponent({ className, ...props }, ref) {
+    function SelectComponent({ className, ...props }, _ref) {
         return (
             <div className={cn("w-full", className || "")}>
                 <Select {...props} />
