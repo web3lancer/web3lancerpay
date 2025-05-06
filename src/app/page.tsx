@@ -1,11 +1,8 @@
 // create a default nextjs homepage for my crypto fintech payment app
 // import dependencies
 import React, { useState } from "react";
-import { useRouter } from "next/router";
-import Link from "next/link";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { useSession } from "next-auth/react";
-import { useTranslation } from "react-i18next";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,17 +12,6 @@ import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useSWRConfig } from "swr";
-import { useQuery } from "react-query";
-import { useMutation } from "react-query";
-import { useQueryClient } from "react-query";
-import dotenv from "dotenv";
-import sidebar from "@/components/sidebar";
-import bottombar from "@/components/bottombar";
-
-dotenv.config();
-
-// design the APP page 
 
 const schema = z.object({
   recipient: z.string().min(1, "Recipient is required"),
@@ -35,22 +21,11 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
-type SendPageProps = {
-  params: {
-    id: string;
-  };
-};
-type SendPage = (props: SendPageProps) => JSX.Element;
-const SendPage: SendPage = () => {
-  const { data: session } = useSession();
-  const { t } = useTranslation();
-  const router = useRouter();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
+const SendPage = () => {
+  const { data: session } = useSession();
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   const formMethods = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -64,9 +39,9 @@ const SendPage: SendPage = () => {
 
   const { handleSubmit, register, formState: { errors } } = formMethods;
 
-  const mutation = useMutation(
-    async (data: FormData) => {
-      // Send data to PhotonLancerr API
+  const onSubmit = async (data: FormData) => {
+    setIsSubmitting(true);
+    try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/payments`, {
         method: "POST",
         headers: {
@@ -81,55 +56,43 @@ const SendPage: SendPage = () => {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
+      const result = await response.json();
 
-      return response.json();
-    },
-    {
-      onSuccess: (data) => {
-        if (data.success) {
-          // Show success message
-          toast({
-            title: t("transaction_successful"),
-            description: `Transaction successful! ID: ${data.data.transaction_id}`,
-            variant: "success",
-          });
-          // Reset form
-          formMethods.reset();
-        } else {
-          toast({
-            title: t("transaction_failed"),
-            description: data.message,
-            variant: "destructive",
-          });
-        }
-      },
-      onError: (error) => {
+      if (response.ok && result.success) {
         toast({
-          title: t("transaction_failed"),
-          description: error.message,
+          title: "Transaction Successful",
+          description: `Transaction successful! ID: ${result.data.transaction_id}`,
+          variant: "success",
+        });
+        formMethods.reset();
+      } else {
+        toast({
+          title: "Transaction Failed",
+          description: result.message || "An error occurred",
           variant: "destructive",
         });
-      },
+      }
+    } catch (error: any) {
+      toast({
+        title: "Transaction Failed",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-  );
+  };
 
   return (
     <DashboardLayout>
       <div className="flex flex-col items-center justify-center min-h-screen py-2">
-        <h1 className="text-2xl font-bold">{t("send_payment
-")}</h1>
+        <h1 className="text-2xl font-bold">Send Payment</h1>
         <form
-          onSubmit={handleSubmit((data) => {
-            setIsSubmitting(true);
-            mutation.mutate(data);
-          })}
+          onSubmit={handleSubmit(onSubmit)}
           className="w-full max-w-md mt-4"
         >
           <div className="mb-4">
-            <Label htmlFor="recipient">{t("recipient")}</Label>
+            <Label htmlFor="recipient">Recipient</Label>
             <Input
               id="recipient"
               type="text"
@@ -142,7 +105,7 @@ const SendPage: SendPage = () => {
           </div>
 
           <div className="mb-4">
-            <Label htmlFor="amount">{t("amount")}</Label>
+            <Label htmlFor="amount">Amount</Label>
             <Input
               id="amount"
               type="number"
@@ -156,7 +119,7 @@ const SendPage: SendPage = () => {
           </div>
 
           <div className="mb-4">
-            <Label htmlFor="currency">{t("currency")}</Label>
+            <Label htmlFor="currency">Currency</Label>
             <Select
               id="currency"
               defaultValue="BTC"
@@ -164,12 +127,11 @@ const SendPage: SendPage = () => {
               className={`mt-1 ${errors.currency ? "border-red-500" : ""}`}
             >
               <SelectTrigger>
-                <SelectValue placeholder={t("select_currency")} />
+                <SelectValue placeholder="Select Currency" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="BTC">Bitcoin (BTC)</SelectItem>
                 <SelectItem value="ETH">Ethereum (ETH)</SelectItem>
-                {/* Add more currencies as needed */}
               </SelectContent>
             </Select>
             {errors.currency && (
@@ -178,7 +140,7 @@ const SendPage: SendPage = () => {
           </div>
 
           <div className="mb-4">
-            <Label htmlFor="memo">{t("memo")}</Label>
+            <Label htmlFor="memo">Memo</Label>
             <Textarea
               id="memo"
               {...register("memo")}
@@ -186,26 +148,13 @@ const SendPage: SendPage = () => {
             />
           </div>
 
-          <Button type="submit" disabled={isSubmitting
-            || mutation.isLoading} className="w-full">
-            {isSubmitting || mutation.isLoading
-              ? t("processing")
-              : t("send_payment")}
+          <Button type="submit" disabled={isSubmitting} className="w-full">
+            {isSubmitting ? "Processing..." : "Send Payment"}
           </Button>
         </form>
-        {error && <p className="text-red-500 mt-4">{error}</p>}
-        {success && <p className="text-green-500 mt-4">{success}</p>}
-      </div>
-
-      <div className="fixed bottom-0 left-0 w-full">
-        <bottombar />
-      </div>
-      <div className="fixed top-0 left-0 w-full">
-        <sidebar />
       </div>
     </DashboardLayout>
   );
-}
+};
 
 export default SendPage;
-
