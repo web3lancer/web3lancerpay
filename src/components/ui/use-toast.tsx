@@ -1,15 +1,23 @@
 // define use-toast component
 
 import React from 'react';
-import { useState, useContext, createContext, ReactNode } from 'react';
-import { ToastActionElement, ToastClose, ToastDescription, ToastTitle, ToastViewport } from './toast';
-import { cn } from '@/lib/utils';
+import { useState, createContext, ReactNode } from 'react';
+
+// Define the ToastOptions interface
+interface ToastOptions {
+    id: string;
+    message: string;
+    duration?: number;
+}
 
 
-const ToastContext = createContext({
+const ToastContext = createContext<{
     toast: (options: ToastOptions) => void;
     close: (id: string) => void;
-    });
+}>({
+    toast: () => {},
+    close: () => {},
+});
 
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
     const [toasts, setToasts] = useState<ToastOptions[]>([]);
