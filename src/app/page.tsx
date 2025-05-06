@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import Sidebar from "@/components/Sidebar";
